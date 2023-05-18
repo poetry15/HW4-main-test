@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>愛文芒果行情</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        table, td, th {
+            border: 1px solid;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+    </style>
+</head>
+<body>
+<h1>愛文芒果行情</h1>
+<h2>新增資料</h2>
+<form id="mango" action="/api" method="post">
+    <label for="date">日期</label>
+    <input type="date" id="date" name="date">
+    <label for="name">商品名稱</label>
+    <input type="text" id="name" name="name">
+    <label for="price">商品平均價格</label>
+    <input type="text" id="price" name="price">
+    <button type="submit">新增</button>
+</form>
+<h2>查詢資料</h2>
+<div id="app">
+    <strong>選取查詢的範圍(目前資料最早只到2022-04-25)<br></strong>
+    <input type="date" v-model="selectedStart">
+    ~
+    <input type="date" v-model="selectedEnd">
+    <button v-on:click="handleClick" :disabled="!isDateValid(selectedStart, selectedEnd)" style="margin-left:10px;margin-top: 10px" >顯示資料</button>
+    <table style="text-align: center; margin-left:100px;margin-top:20px;width: 80%;table-layout:fixed">
+        <thead>
+        <tr>
+            <th>日期</th>
+            <th>商品名稱</th>
+            <th>商品平均價格</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="item in data" >
+            <td>{{ item.日期 }}</td>
+            <td>{{ item.商品名稱 }}</td>
+            <td>{{ item.商品平均價格 }}</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const app = Vue.createApp({
+        data() {
+            return {
+                data: [],
+                selectedStart:'',
+                selectedEnd:''
+            };
+        },
+        methods: {
+            async handleClick() {
+                console.log("data");
+                const url = window.location.origin+"/api"; // 資料傳送到的 URL
+                try {
+                    const response = await fetch(url, {
+                        method: 'GET',
+                    });
+                    const res_data = await response.json();
+                    if (this.selectedEnd && this.selectedStart) {
+                        this.data = res_data.filter(item => item.日期 >= this.selectedStart && item.日期 <= this.selectedEnd);
+                    }
+                    else if (this.selectedEnd && !this.selectedStart) {
+                        this.data = res_data.filter(item.日期 <= this.selectedEnd);
+                    }
+                    else if (!this.selectedEnd && this.selectedStart) {
+                        this.data = res_data.filter(item => item.日期 >= this.selectedStart);
+                    }
+                    else {
+                        this.data = res_data;
+                    }
+
+                    this.data.sort((a, b) => new Date(a.日期) - new Date(b.日期));
+
+                    console.log("成功", res_data );
+                } catch (error) {
+                    console.log("錯誤", error);
+                }
+            },
+            isDateValid(startDate, endDate) {
+                if (startDate) {
+                    const limitDate = new Date('2022-04-27');
+                    const selectedDate = new Date(startDate);
+                    return selectedDate >= limitDate;
+                }
+                if (!startDate || !endDate) {
+                    // 如果起始日期和結束日期都未輸入，表示查詢全部資料，視為有效
+                    return true;
+                }
+                if (startDate && endDate) {
+                    // 如果起始日期和結束日期都有輸入，則確認起始日期不晚於結束日期
+                    return startDate <= endDate;
+                }
+                // 其他情況視為無效
+                return false;
+            }
+        }
+    });
+
+    app.mount('#app');
+</script>
+</body>
+</html>
